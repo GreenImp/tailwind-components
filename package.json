@@ -1,0 +1,32 @@
+{
+  "name": "tailwind-components",
+  "description": "A collection of Vuejs components using Tailwind",
+  "author": "GreenImp Media <info@greenimp.co.uk> (https://greenimp.co.uk)",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GreenImp/tailwind-components"
+  },
+  "bugs": {
+    "url": "https://github.com/GreenImp/tailwind-components/issues"
+  },
+  "homepage": "https://github.com/GreenImp/tailwind-components",
+  "funding": [
+    "https://github.com/sponsors/GreenImp"
+  ],
+  "keywords": [
+    "tailwind",
+    "tailwind css",
+    "vue",
+    "vuejs",
+    "vue js",
+    "css",
+    "component",
+    "components"
+  ],
+  "dependencies": {
+    "@headlessui/vue": "^1.7.3",
+    "@heroicons/vue": "^2.0.13"
+  }
+}
