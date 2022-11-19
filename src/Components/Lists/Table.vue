@@ -51,13 +51,20 @@ const tableFields = computed(() => {
     }).value();
   }
 
-  return _.map(props.fields, (field) => {
+  return _.chain(props.fields)
+      .map((field) => {
+        if (!field) {
+          return;
+        }
+
     if (_.isObject(field)) {
       return {...field, label: getLabel(field), key: field.key || _.snakeCase(field.label) };
     }
 
     return { label: getLabel(field), key: field };
-  });
+      })
+      .filter()
+      .value();
 });
 const requestContext = computed(() => {
   return {
