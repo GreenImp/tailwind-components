@@ -75,7 +75,7 @@ const requestContext = computed(() => {
   };
 });
 
-const getLabel = (field) => _.isObject(field) ? field.label || _.startCase(field.key) : `${field}`;
+const getLabel = (field) => _.isObject(field) ? field.label ?? _.startCase(field.key) : `${field}`;
 const isSortable = (field) => _.isObject(field) && (field?.sortable === true);
 const isSortedBy = (field) => unref(currentSortBy) === field;
 const fetch = () => {
