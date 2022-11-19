@@ -27,6 +27,8 @@ const props = defineProps({
     default: 'asc',
   },
   striped: Boolean,
+  tbodyTdClass: [ Array, Function, String ],
+  tbodyTrClass: [ Array, Function, String ],
 });
 
 const emit = defineEmits(['sort', 'update:sortBy']);
@@ -146,6 +148,13 @@ const toggleDir = (direction) => {
 
   emit('update:sortBy', unref(currentSortDir));
 };
+const parseStyles = (value, item) => {
+  if (_.isFunction(value)) {
+    return value(item);
+  }
+
+  return value;
+};
 
 defineExpose({
   fetch,
@@ -162,7 +171,7 @@ onMounted(() => {
     <div :class="responsive ? 'overflow-x-auto' : undefined">
       <div :class="[responsive ? 'inline-block min-w-full py-2 align-middle md:px-1' : undefined]">
         <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded dark:shadow-slate-800 dark:ring-slate-700">
-          <table class="min-w-full divide-y divide-gray-300 dark:divide-slate-300">
+          <table class="min-w-full divide-y divide-gray-300 dark:divide-slate-500">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th
@@ -207,12 +216,19 @@ onMounted(() => {
               <tr
                   v-else
                   v-for="(item, index) in tableData"
-                  :class="striped && index % 2 === 1 ? 'bg-gray-50 dark:bg-slate-700' : undefined"
+                  :class="[
+                      striped && index % 2 === 1 ? 'bg-gray-50 dark:bg-slate-700' : undefined,
+                      parseStyles(tbodyTrClass, item)
+                  ]"
               >
                 <td
                     v-for="(field) in tableFields"
-                    class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-slate-400"
-                    :class="field.class"
+                    :class="[
+                        'whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-slate-400',
+                        parseStyles(field.class, item),
+                        parseStyles(field.bodyClass, item),
+                        parseStyles(tbodyTdClass, item),
+                    ]"
                 >
                   <slot :name="`cell(${field.key})`" :value="item[field.key]" :item="item" :index="index">
                     <slot name="cell" :value="field" :item="item" :index="index">
