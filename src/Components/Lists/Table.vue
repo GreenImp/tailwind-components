@@ -26,6 +26,7 @@ const props = defineProps({
     type: String,
     default: 'asc',
   },
+  striped: Boolean,
 });
 
 const emit = defineEmits(['sort', 'update:sortBy']);
@@ -203,7 +204,11 @@ onMounted(() => {
                 </td>
               </tr>
 
-              <tr v-else v-for="(item, index) in tableData" :class="index % 2 === 0 ? undefined : 'bg-gray-50 dark:bg-slate-700'">
+              <tr
+                  v-else
+                  v-for="(item, index) in tableData"
+                  :class="striped && index % 2 === 1 ? 'bg-gray-50 dark:bg-slate-700' : undefined"
+              >
                 <td
                     v-for="(field) in tableFields"
                     class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-slate-400"
