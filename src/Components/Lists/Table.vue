@@ -1,11 +1,18 @@
 <script setup>
-import { computed, onMounted, ref, unref } from 'vue';
+import { computed, onMounted, ref, unref, watch } from 'vue';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/vue/20/solid';
 import Pagination from '../Navigation/Pagination/Pagination';
 import Spinner from '../Elements/Spinner';
 
 const props = defineProps({
   fields: Array,
+  filter: String,
+  filters: {
+    type: Object,
+    default() {
+      return ref({});
+    }
+  },
   items: {
     type: [Array, Function],
     required: true,
@@ -68,7 +75,9 @@ const tableFields = computed(() => {
 });
 const requestContext = computed(() => {
   return {
-    currentPage: unref(currentPage),
+    page: unref(currentPage),
+    filter: props.filter || undefined,
+    filters: props.filters || undefined,
     perPage: props.perPage || undefined,
     sortBy: unref(currentSortBy),
     sortDir: unref(currentSortDir) || 'asc',
@@ -78,7 +87,7 @@ const requestContext = computed(() => {
 const getLabel = (field) => _.isObject(field) ? field.label ?? _.startCase(field.key) : `${field}`;
 const isSortable = (field) => _.isObject(field) && (field?.sortable === true);
 const isSortedBy = (field) => unref(currentSortBy) === field;
-const fetch = () => {
+const fetch = async () => {
   if (busy.value) {
     return Promise.reject('Busy');
   }
@@ -167,6 +176,13 @@ defineExpose({
   fetch,
   sortData,
 });
+
+watch(
+    [props.filters, () => _.isFunction(props.items) ? null : props.items],
+    async (newFilters, oldFilters) => {
+      return fetch();
+    }
+);
 
 onMounted(() => {
   fetch();
