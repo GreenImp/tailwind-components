@@ -85,6 +85,7 @@ const requestContext = computed(() => {
 });
 
 const getLabel = (field) => _.isObject(field) ? field.label ?? _.startCase(field.key) : `${field}`;
+const getValue = (item, key) => _.get(item, key);
 const isSortable = (field) => _.isObject(field) && (field?.sortable === true);
 const isSortedBy = (field) => unref(currentSortBy) === field;
 const fetch = async () => {
@@ -261,9 +262,19 @@ onMounted(() => {
                         parseStyles(tbodyTdClass, item),
                     ]"
                 >
-                  <slot :name="`cell(${field.key})`" :value="item[field.key]" :item="item" :index="index">
-                    <slot name="cell" :value="field" :item="item" :index="index">
-                      {{ item[field.key] || '' }}
+                  <slot
+                      :name="`cell(${field.key})`"
+                      :value="getValue(item, field.key)"
+                      :item="item"
+                      :index="index"
+                  >
+                    <slot
+                        name="cell"
+                        :value="getValue(item, field.key)"
+                        :item="item"
+                        :index="index"
+                    >
+                      {{ getValue(item, field.key) || '' }}
                     </slot>
                   </slot>
                 </td>
