@@ -180,6 +180,11 @@ const parseStyles = (value, item) => {
 
   return value;
 };
+const toggleDetails = (index) => {
+  if (tableData.value[index]) {
+    tableData.value[index]._showDetails = !tableData.value[index]._showDetails;
+  }
+};
 
 defineExpose({
   fetch,
@@ -245,10 +250,13 @@ onMounted(() => {
                 </td>
               </tr>
 
-              <tr
+            <template
                   v-else
                   v-for="(item, index) in tableData"
+            >
+              <tr
                   :class="[
+                      'text-sm text-gray-500 dark:text-slate-400',
                       striped && index % 2 === 1 ? 'bg-gray-50 dark:bg-slate-700' : undefined,
                       parseStyles(tbodyTrClass, item)
                   ]"
@@ -256,7 +264,7 @@ onMounted(() => {
                 <td
                     v-for="(field) in tableFields"
                     :class="[
-                        'whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-slate-400',
+                        'whitespace-nowrap px-3 py-4',
                         parseStyles(field.class, item),
                         parseStyles(field.bodyClass, item),
                         parseStyles(tbodyTdClass, item),
@@ -267,18 +275,38 @@ onMounted(() => {
                       :value="getValue(item, field.key)"
                       :item="item"
                       :index="index"
+                      :toggleDetails="() => toggleDetails(index)"
+                      :detailsShowing="item._showDetails || false"
                   >
                     <slot
                         name="cell"
                         :value="getValue(item, field.key)"
                         :item="item"
                         :index="index"
+                        :toggleDetails="() => toggleDetails(index)"
+                        :detailsShowing="item._showDetails || false"
                     >
                       {{ getValue(item, field.key) || '' }}
                     </slot>
                   </slot>
                 </td>
               </tr>
+
+              <template v-if="$slots['row-details'] && item._showDetails">
+                <tr>
+                  <td :colspan="tableFields.length" class="-mt-px px-3 py-4">
+                    <slot
+                        name="row-details"
+                        :item="item"
+                        :index="index"
+                        :fields="tableFields"
+                        :toggleDetails="() => toggleDetails(index)"
+                        :detailsShowing="item._showDetails || false"
+                    />
+                  </td>
+                </tr>
+              </template>
+            </template>
             </tbody>
           </table>
         </div>
