@@ -113,7 +113,15 @@ const fetch = async () => {
   }
 
   if (_.isObject(props.items) || _.isArray(props.items)) {
-    setData(props.items);
+    // clone the items and sort them
+    const items = _.chain(props.items)
+        .castArray()
+        .cloneDeep()
+        .sortBy((o) => o[currentSortBy.value])
+        .thru((value) => currentSortDir.value === 'desc' ? value.reverse() : value)
+        .value();
+
+    setData(items);
   } else {
     setData([]);
   }
@@ -127,11 +135,11 @@ const onPaginate = (page) => {
   fetch();
 };
 const setData = (data) => {
-  if (_.isObject(data)) {
+  if (!_.isArray(data) && _.isObject(data)) {
     tableData.value = data.data?.data || data.data || [];
     totalRows.value = data.data?.total || data.total || tableData.value.length;
   } else {
-    tableData.value = _.cloneDeep(_.castArray(data || []));
+    tableData.value = data || [];
     totalRows.value = tableData.value.length;
   }
 };
