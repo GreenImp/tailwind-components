@@ -1,11 +1,18 @@
 <script setup>
-import { computed, onMounted, ref, unref } from 'vue';
+import { computed, onMounted, ref, unref, watch } from 'vue';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/vue/20/solid';
 import Pagination from '../Navigation/Pagination/Pagination';
 import Spinner from '../Elements/Spinner';
 
 const props = defineProps({
   fields: Array,
+  filter: String,
+  filters: {
+    type: Object,
+    default() {
+      return ref({});
+    }
+  },
   items: {
     type: [Array, Function],
     required: true,
@@ -26,6 +33,9 @@ const props = defineProps({
     type: String,
     default: 'asc',
   },
+  striped: Boolean,
+  tbodyTdClass: [ Array, Function, String ],
+  tbodyTrClass: [ Array, Function, String ],
 });
 
 const emit = defineEmits(['sort', 'update:sortBy']);
@@ -48,27 +58,37 @@ const tableFields = computed(() => {
     }).value();
   }
 
-  return _.map(props.fields, (field) => {
+  return _.chain(props.fields)
+      .map((field) => {
+        if (!field) {
+          return;
+        }
+
     if (_.isObject(field)) {
       return {...field, label: getLabel(field), key: field.key || _.snakeCase(field.label) };
     }
 
     return { label: getLabel(field), key: field };
-  });
+      })
+      .filter()
+      .value();
 });
 const requestContext = computed(() => {
   return {
-    currentPage: unref(currentPage),
+    page: unref(currentPage),
+    filter: props.filter || undefined,
+    filters: props.filters || undefined,
     perPage: props.perPage || undefined,
     sortBy: unref(currentSortBy),
     sortDir: unref(currentSortDir) || 'asc',
   };
 });
 
-const getLabel = (field) => _.isObject(field) ? field.label || _.startCase(field.key) : `${field}`;
+const getLabel = (field) => _.isObject(field) ? field.label ?? _.startCase(field.key) : `${field}`;
+const getValue = (item, key) => _.get(item, key);
 const isSortable = (field) => _.isObject(field) && (field?.sortable === true);
 const isSortedBy = (field) => unref(currentSortBy) === field;
-const fetch = () => {
+const fetch = async () => {
   if (busy.value) {
     return Promise.reject('Busy');
   }
@@ -94,7 +114,15 @@ const fetch = () => {
   }
 
   if (_.isObject(props.items) || _.isArray(props.items)) {
-    setData(props.items);
+    // clone the items and sort them
+    const items = _.chain(props.items)
+        .castArray()
+        .cloneDeep()
+        .sortBy((o) => o[currentSortBy.value])
+        .thru((value) => currentSortDir.value === 'desc' ? value.reverse() : value)
+        .value();
+
+    setData(items);
   } else {
     setData([]);
   }
@@ -108,11 +136,11 @@ const onPaginate = (page) => {
   fetch();
 };
 const setData = (data) => {
-  if (_.isObject(data)) {
+  if (!_.isArray(data) && _.isObject(data)) {
     tableData.value = data.data?.data || data.data || [];
     totalRows.value = data.data?.total || data.total || tableData.value.length;
   } else {
-    tableData.value = _.cloneDeep(_.castArray(data || []));
+    tableData.value = data || [];
     totalRows.value = tableData.value.length;
   }
 };
@@ -145,11 +173,30 @@ const toggleDir = (direction) => {
 
   emit('update:sortBy', unref(currentSortDir));
 };
+const parseStyles = (value, item) => {
+  if (_.isFunction(value)) {
+    return value(item);
+  }
+
+  return value;
+};
+const toggleDetails = (index) => {
+  if (tableData.value[index]) {
+    tableData.value[index]._showDetails = !tableData.value[index]._showDetails;
+  }
+};
 
 defineExpose({
   fetch,
   sortData,
 });
+
+watch(
+    [props.filters, () => _.isFunction(props.items) ? null : props.items],
+    async (newFilters, oldFilters) => {
+      return fetch();
+    }
+);
 
 onMounted(() => {
   fetch();
@@ -161,7 +208,7 @@ onMounted(() => {
     <div :class="responsive ? 'overflow-x-auto' : undefined">
       <div :class="[responsive ? 'inline-block min-w-full py-2 align-middle md:px-1' : undefined]">
         <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded dark:shadow-slate-800 dark:ring-slate-700">
-          <table class="min-w-full divide-y divide-gray-300 dark:divide-slate-300">
+          <table class="min-w-full divide-y divide-gray-300 dark:divide-slate-500">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th
@@ -203,19 +250,63 @@ onMounted(() => {
                 </td>
               </tr>
 
-              <tr v-else v-for="(item, index) in tableData" :class="index % 2 === 0 ? undefined : 'bg-gray-50 dark:bg-slate-700'">
+            <template
+                  v-else
+                  v-for="(item, index) in tableData"
+            >
+              <tr
+                  :class="[
+                      'text-sm text-gray-500 dark:text-slate-400',
+                      striped && index % 2 === 1 ? 'bg-gray-50 dark:bg-slate-700' : undefined,
+                      parseStyles(tbodyTrClass, item)
+                  ]"
+              >
                 <td
                     v-for="(field) in tableFields"
-                    class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-slate-400"
-                    :class="field.class"
+                    :class="[
+                        'whitespace-nowrap px-3 py-4',
+                        parseStyles(field.class, item),
+                        parseStyles(field.bodyClass, item),
+                        parseStyles(tbodyTdClass, item),
+                    ]"
                 >
-                  <slot :name="`cell(${field.key})`" :value="item[field.key]" :item="item" :index="index">
-                    <slot name="cell" :value="field" :item="item" :index="index">
-                      {{ item[field.key] || '' }}
+                  <slot
+                      :name="`cell(${field.key})`"
+                      :value="getValue(item, field.key)"
+                      :item="item"
+                      :index="index"
+                      :toggleDetails="() => toggleDetails(index)"
+                      :detailsShowing="item._showDetails || false"
+                  >
+                    <slot
+                        name="cell"
+                        :value="getValue(item, field.key)"
+                        :item="item"
+                        :index="index"
+                        :toggleDetails="() => toggleDetails(index)"
+                        :detailsShowing="item._showDetails || false"
+                    >
+                      {{ getValue(item, field.key) || '' }}
                     </slot>
                   </slot>
                 </td>
               </tr>
+
+              <template v-if="$slots['row-details'] && item._showDetails">
+                <tr>
+                  <td :colspan="tableFields.length" class="-mt-px px-3 py-4">
+                    <slot
+                        name="row-details"
+                        :item="item"
+                        :index="index"
+                        :fields="tableFields"
+                        :toggleDetails="() => toggleDetails(index)"
+                        :detailsShowing="item._showDetails || false"
+                    />
+                  </td>
+                </tr>
+              </template>
+            </template>
             </tbody>
           </table>
         </div>
